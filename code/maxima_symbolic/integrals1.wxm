@@ -1,0 +1,362 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 0.8.4 ] */
+
+/* [wxMaxima: comment start ]
+tau1>=tau2 case
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: comment start ]
+
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: title   start ]
+Settings
+   [wxMaxima: title   end   ] */
+
+/* [wxMaxima: input   start ] */
+remvalue(all);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+kill(all);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+rv(y):=ev(y,[tau1=1,rho=.3,kappa=1]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+load("solve_rat_ineq");
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(tau1>0 and tau2>0 and rho>0 and kappa>0);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: title   start ]
+Onsets
+   [wxMaxima: title   end   ] */
+
+/* [wxMaxima: input   start ] */
+o1:  kappa*(t/tau1)*exp(-(t/tau1));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+o2: kappa*((t-dt)/tau2)*exp(-((t-dt)/tau2));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: title   start ]
+Derivatives
+   [wxMaxima: title   end   ] */
+
+/* [wxMaxima: input   start ] */
+do1: diff(o1,t);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+do2: diff(o2,t);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: title   start ]
+Differential Integrals
+   [wxMaxima: title   end   ] */
+
+/* [wxMaxima: section start ]
+PP Integral
+   [wxMaxima: section end   ] */
+
+/* [wxMaxima: subsect start ]
+(-tau2,0] 
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(dt>-(rho*tau1) and dt<=0)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+pp1: factor(fullratsimp(ev(integrate(do1*do2,t,0,dt+tau2),tau2=rho*tau1)));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(pp1),[dt,-.1,0]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+forget(dt>-(rho*tau1) and dt <=0)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+(0,tau1-tau2]
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(dt>0 and dt<=(tau1-rho*tau1))$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+pp2: factor(fullratsimp(ev(integrate(do1*do2,t,dt,dt+tau2),tau2=rho*tau1)));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(pp2),[dt,0,.9]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+forget(dt>0 and dt<=(tau1-rho*tau1))$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+(tau1-tau2,tau1]
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(dt>(tau1-rho*tau1) and dt<=tau1)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+declare(k,multiplicative);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+pp3: radcan(factor(fullratsimp(ev(integrate(do1*do2,t,dt,tau1),tau2=rho*tau1))));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(pp3),[dt,0.9,1]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+forget(dt>(tau1-rho*tau1) and dt<=tau1)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+(-tau1,tau1] -- All components
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+pp:
+ if     dt>-rho*tau1 and dt <=0 then pp1 
+ elseif dt>0 and dt<=(tau1-rho*tau1) then pp2
+ elseif dt>(tau1-rho*tau1) and dt <=tau1 then pp3
+ else 0;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(pp),
+[dt,-1.2,1.2],[y,0,.4]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+Maxima
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: comment start ]
+the maximum is at dt=0 discontinuity point
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+limit(pp1,dt,0);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+ppx1: limit(pp2,dt,0);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+The maximum is at [0,ppx1]
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+PPM: [0,ppx1];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d([rv(pp),
+[discrete, [rv(PPM)]]],
+[dt,-1.2,1.2],[y,0,.5],[style,lines,points],
+[point_type,bullet],[legend,"pp","maximum"]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: section start ]
+NN Integral
+   [wxMaxima: section end   ] */
+
+/* [wxMaxima: subsect start ]
+(-inf,tau1-tau2]
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(dt<=(tau1-rho*tau1))$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+nn1: factor(fullratsimp(ev(integrate(ev(do1*do2,tau2=rho*tau1),t,tau1,inf))));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(nn1),[dt,-1,.9]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+forget(dt<=(tau1-rho*tau1))$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+(tau1-tau2,inf)
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(dt>(tau1-rho*tau1))$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+nn2: factor(fullratsimp(ev(integrate(ev(do1*do2,tau2=rho*tau1),t,dt+rho*tau1,inf))));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(nn2),[dt,.9,10]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+forget(dt>(tau1-rho*tau1))$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+(-inf,inf) All components
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+nn: if dt<=(tau1-rho*tau1) then nn1 else nn2;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(nn),[dt,-10,10]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+Maxima
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: comment start ]
+Find 0 Derivative point of the first component (-inf,tau1-tau2]
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+nnx1:ev(dt,solve(diff(nn1,dt),dt));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Solve inequality to verify if the point is within the component's interval
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+eq1: nnx1<tau1-rho*tau1;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Result: the inequality is true only if rho >=1 that is only if tau1<tau2 
+(we are in the case tau1>=tau2)
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+solve_rat_ineq(ev(eq1,tau1=1));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+nny1:limit(nn1,dt,nnx1);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+#################################################
+#################################################
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: comment start ]
+Find 0 Derivative point of the second component [tau1-tau2,inf
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+nnx2:ev(dt,solve(diff(nn2,dt),dt));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Solve inequality to verify if the point is within the component's interval
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+eq2:nnx2>=tau1-rho*tau1;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Result: the inequality is true only if rho <=1 that is tau1>=tau2. !SOLUTION!
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+solve_rat_ineq(ev(eq2,tau1=1));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+nny2:limit(nn2,dt,nnx2);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+NNM:  [nnx2,nny2] ;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+rv(NNM);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(
+[rv(nn),
+[discrete,[rv(NNM)]]],
+[dt,-10,10],
+[y,0,.07],
+[style,lines,points],
+[point_type,bullet],
+[legend,"nn","maximum"])$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: section start ]
+NP Integral
+   [wxMaxima: section end   ] */
+
+/* [wxMaxima: subsect start ]
+(tau1-tau2,tau1]
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(dt>(tau1-rho*tau1) and dt <= tau1)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+np1: fullratsimp(ev(integrate(ev(do1*do2,tau2=rho*tau1),t,dt+(rho*tau1),tau1)));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(np1),[dt,.7,1]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+forget(dt>(tau1-rho*tau1) and dt <= tau1)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: subsect start ]
+(tau1,inf)
+   [wxMaxima: subsect end   ] */
+
+/* [wxMaxima: input   start ] */
+assume(dt < tau1)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+np2: fullratsimp(ev(integrate(ev(do1*do2,tau2=rho*tau1),t,dt+(rho*tau1),dt)));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+wxplot2d(rv(np2),[dt,1,10]);
+/* [wxMaxima: input   end   ] */
+
+/* Maxima can't load/batch files which end with a comment! */
+"Created with wxMaxima"$

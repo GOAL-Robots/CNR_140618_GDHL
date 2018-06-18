@@ -1,0 +1,220 @@
+### GENERAL DIFFERENTIAL HEBBIAN LEARNING   ###
+### by Gianluca Baldassarre                 ###
+### Institute of Cognitive Sciences         ###
+### National Research Council of Italy      ###
+### Rome 11/07/2016 --> 07/03/2017          ###
+
+
+
+rm(list = ls())
+
+# INTRO ------------------------------------------------------------------------
+
+# __ list of required packages ====
+toInstall <- c("extrafont")
+
+# __ verify and install uninstalled packages ====
+for (pkg in toInstall) {
+    if (!require(pkg, character.only = TRUE)) {
+        install.packages(pkg, repos = "http://cran.us.r-project.org")
+    }
+}
+
+# __ load Verdana font ====
+if (!("Verdana" %in% fonts())) {
+    font_import(prompt=FALSE)
+    loadfonts()
+}
+
+plot.offline = FALSE
+if (file.exists("OFFLINE")) { plot.offline = TRUE }
+
+#Clean console
+cat('\f')       #Clean console
+graphics.off()  #Close all previously opened windows
+
+
+#IMPORTANT NOTE, RELATED TO CONVENTIONS USED HERE ON CONTINOUS TIME AND DISCRETE EVENTS
+#In the time series vectors used here, index 1 correspond to t=0;
+#so with sDeltTime=0.1, 1second correspond to index 11
+#An event that lasts 1 second, with sDeltTime=0.1, only occupies 10 steps, e.g. covers 2:11 (note these are 10 steps)
+#SO, TO DEBUG SET:
+#sDeltTime = 0.2 #So you have 5 steps per second
+#sSimuDura = 3   #So you have 15 steps of simulationin total... actually 16 as 1 is added to sSimuDura/sDeltTime to have:
+#Vector indexes:  01 | 02  03  04  05  06 | 07  08  09  10  11 | 12  13  14  15  16 |  ...in discrete steps
+#Continuous time:  0 | .2  .4  .6  .8 1.0 |1.2 1.4 1.6 1.8 2.0 |1.2 1.4 1.6 1.8 3.0 |  ...in seconds
+#Event:              | _   _   _   _   _  |_   -    ^  -   _   | _   _   _   _   _  |
+
+#Cosine (1) or Gaussian (2) event
+sEvenType = 1    #Set this to 1 or 2
+
+#Simulation basic variables
+sSimuDura = 3                                     #Duration of simulation, in seconds
+sDeltTime = 0.01                                   #Duration time-step of simulation, in seconds: note that with small time step, derivative is delayed of 1 with respect to signal, so Worgotter's rule with delay=0 becomes asimmetric
+iSimuStepNumb = as.integer(sSimuDura/sDeltTime+1) #Number of steps of simulation
+vTime <- seq(0, sSimuDura, sDeltTime)             #Vector of times of simulation steps
+
+sEvenDura = 1                                     #Duration of event in seconds
+sDelaRange = sEvenDura*2                          #Delay range between pre- and post-synaptic events, from neagative to positive values
+iDelaNumb =  as.integer(sDelaRange/sDeltTime)     #Number of delays
+#iDelaNumb =  4L                                  #Number of delays
+
+iEvenStepNumb = as.integer(sEvenDura/sDeltTime)   #Duration of event in steps
+iEvenSign1Step = (iEvenStepNumb*1L)+2L            #Event in signal 1, in steps (= multiples of iEvenStepNumb
+
+
+
+#SIGNALS
+
+#Event signals
+if(sEvenType==1) {
+  #Cosine event
+  vSignEven = (cos((seq(0, sEvenDura, by = (sEvenDura/(iEvenStepNumb-1))) * 2 * pi) - pi) + 1) / 2 #A cosine event signal to be put into signal vectors
+} else
+  if (sEvenType == 2) { #Gaussian event
+    vSignEven = dnorm(seq(-sEvenDura/2, sEvenDura/2, by = (sEvenDura/(iEvenStepNumb-1))), mean = 0, sd = .1, log = FALSE) #A Gaussian event signal to be put into signal vectors
+}
+#plot(vSignEven)
+
+#First signal
+vSign1 = rep(0,iSimuStepNumb) #First signal with all zero values
+vSign1[iEvenSign1Step:(iEvenSign1Step+iEvenStepNumb-1)] = vSignEven
+vSign1Deri = diff(vSign1, lag=1, differences=1)/sDeltTime
+vSign1Deri = append(vSign1Deri, 0, after=0)
+
+##Graphics for debugging
+#plot(vTime,vSign1,"l", col="red", lwd=3)
+#par(new=T) ; plot(vTime,vSign1Deri,"l",col="blue",lwd=3)
+
+#Second signal with different delays
+mSign2     = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mSign2Deri = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+
+#Creation of matrixes for different G-DHL components
+mWeigChanPP  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigPP      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigChanSP  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigSP      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigChanNP  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigNP      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+
+mWeigChanPS  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigPS      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigChanSS  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigSS      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigChanNS  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigNS      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+
+mWeigChanPN  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigPN      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigChanSN  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigSN      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigChanNN  = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigNN      = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+
+#iDelaNumb=1L #Activate this line of code to have only 1 or few signal2
+for (iCoun in 1L:iDelaNumb) {
+  iEvenSignStep = iEvenSign1Step - iEvenStepNumb + (iCoun - 1L)
+  mSign2[iCoun, iEvenSignStep:(iEvenSignStep+iEvenStepNumb-1L)] = vSignEven
+  vSign2DeriShort = diff(mSign2[iCoun,], lag=1, differences=1)/sDeltTime
+  mSign2Deri[iCoun,] = append(vSign2DeriShort, 0, after=0)
+
+  mWeigChanPP[iCoun,] = (vSign1Deri*(vSign1Deri>0)) * (mSign2Deri[iCoun,]*(mSign2Deri[iCoun,]>0)) * sDeltTime
+  mWeigPP[iCoun,]     = cumsum(mWeigChanPP[iCoun,])
+  mWeigChanSP[iCoun,] = (vSign1 * (mSign2Deri[iCoun,]*(mSign2Deri[iCoun,]>0))) * sDeltTime
+  mWeigSP[iCoun,]     = cumsum(mWeigChanSP[iCoun,])
+  mWeigChanNP[iCoun,] = (-vSign1Deri*(vSign1Deri<0)) * (mSign2Deri[iCoun,]*(mSign2Deri[iCoun,]>0)) * sDeltTime
+  mWeigNP[iCoun,]     = cumsum(mWeigChanNP[iCoun,])
+
+  mWeigChanPS[iCoun,] = (vSign1Deri*(vSign1Deri>0)) * mSign2[iCoun,] * sDeltTime
+  mWeigPS[iCoun,]     = cumsum(mWeigChanPS[iCoun,])
+  mWeigChanSS[iCoun,] = (vSign1 * mSign2[iCoun,]) * sDeltTime
+  mWeigSS[iCoun,]     = cumsum(mWeigChanSS[iCoun,])
+  mWeigChanNS[iCoun,] = (-vSign1Deri*(vSign1Deri<0)) * mSign2[iCoun,] * sDeltTime
+  mWeigNS[iCoun,]     = cumsum(mWeigChanNS[iCoun,])
+
+  mWeigChanPN[iCoun,] = (vSign1Deri*(vSign1Deri>0)) * (-mSign2Deri[iCoun,]*(mSign2Deri[iCoun,]<0)) * sDeltTime
+  mWeigPN[iCoun,]     = cumsum(mWeigChanPN[iCoun,])
+  mWeigChanSN[iCoun,] = vSign1 * (-mSign2Deri[iCoun,]*(mSign2Deri[iCoun,]<0)) * sDeltTime
+  mWeigSN[iCoun,]     = cumsum(mWeigChanSN[iCoun,])
+  mWeigChanNN[iCoun,] = (-vSign1Deri*(vSign1Deri<0)) * (-mSign2Deri[iCoun,]*(mSign2Deri[iCoun,]<0)) * sDeltTime
+  mWeigNN[iCoun,]     = cumsum(mWeigChanNN[iCoun,])
+
+
+  ##Graphics for debugging
+  #par(new=T); plot(vTime,mSign2[iCoun,],"l")
+  #par(new=T); plot(vTime,mSign2Deri[iCoun,],"l",col="blue")
+}
+
+#***************************************************************
+#GRAPHICS
+#Fig3 - Combination of kernels: 4 `strange' combined kernels, that capture the brain learning ----
+
+mWeigKern1 = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigKern2 = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigKern3 = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigKern4 = matrix(rep(0.0,iDelaNumb*iSimuStepNumb),iDelaNumb,iSimuStepNumb,TRUE)
+mWeigKern1 = 0 * mWeigPP + 1 * mWeigSP + 0 * mWeigNP + 0 * mWeigPS + 0 * mWeigSS + 0 * mWeigNS + 0 * mWeigPN - 1 * mWeigSN + 0 * mWeigNN#Worgotter
+mWeigKern2 = 0 * mWeigPP + 0 * mWeigSP + 0 * mWeigNP + 0 * mWeigPS + 0 * mWeigSS - 1 * mWeigNS + 0 * mWeigPN + 1 * mWeigSN + 0 * mWeigNN
+mWeigKern3 = 1 * mWeigPP + 0 * mWeigSP - 1 * mWeigNP + 0 * mWeigPS + 0 * mWeigSS + 0 * mWeigNS - 1 * mWeigPN + 0 * mWeigSN + 1 * mWeigNN#Kosko
+mWeigKern4 = 0 * mWeigPP + 0 * mWeigSP + 1 * mWeigNP + 0 * mWeigPS + 0 * mWeigSS + 0 * mWeigNS - 1 * mWeigPN + 0 * mWeigSN + 0 * mWeigNN
+#Graphics
+
+all_plots <- function() {
+    layout(matrix(c(1, 2, 3, 4), 2, 2, byrow = TRUE)) #Creates graphical matrix spots where to put graps. Graph with order 1 in code will occupy slots with index 1: graphs with order 2 will occupy slots with index 2, ...
+    par(ps = 11, mar= c(5, 4, 1, 2))
+    plot(
+        seq(-sEvenDura, sEvenDura, sDeltTime),
+        append(mWeigKern1[, iSimuStepNumb], 0, after = iDelaNumb),
+        "l",
+        xlab = "Inter-event interval (sec)",
+        ylab = "Weight update (`causal rule')"
+    )
+    plot(
+        seq(-sEvenDura, sEvenDura, sDeltTime),
+        append(mWeigKern2[, iSimuStepNumb], 0, after = iDelaNumb),
+        "l",
+        xlab = "Inter-event interval (sec)",
+        ylab = "Weight update (`anticausal rule')"
+    )
+    plot(
+        seq(-sEvenDura, sEvenDura, sDeltTime),
+        append(mWeigKern3[, iSimuStepNumb], 0, after = iDelaNumb),
+        "l",
+        xlab = "Inter-event interval (sec)",
+        ylab = "Weight update (`coincidence rule')"
+    )
+    plot(
+        seq(-sEvenDura, sEvenDura, sDeltTime),
+        append(mWeigKern4[, iSimuStepNumb], 0, after = iDelaNumb),
+        "l",
+        xlab = "Inter-event interval (sec)",
+        ylab = "Weight update (`flat-at-zero rule')"
+    )
+}
+
+all_plots()
+if(plot.offline == TRUE) {
+    postscript(
+        'Fig3.eps',
+        onefile = FALSE,
+        horizontal = FALSE,
+        width = 5,
+        height = 4.5,
+        colormodel="rgb",
+        pointsize = 11,
+        family = "Times"
+    )
+    all_plots()
+    dev.off()
+    tiff(
+        file = "Fig3.tiff",
+        width = 2000,
+        height = 1800,
+        pointsize = 11,
+        units = "px",
+        res = 400
+    )
+    all_plots()
+    dev.off()
+}
